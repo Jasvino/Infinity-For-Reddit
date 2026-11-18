@@ -739,9 +739,16 @@ public class PostFragment extends Fragment implements FragmentCommunicator {
             usage = PostFilterUsage.HOME_TYPE;
             nameOfUsage = PostFilterUsage.NO_USAGE;
 
-            String sort = mSortTypeSharedPreferences.getString(SharedPreferencesUtils.SORT_TYPE_SUBREDDIT_POST_BASE + "-", SortType.Type.HOT.name());
+            boolean saveSortType = mSharedPreferences.getBoolean(SharedPreferencesUtils.SAVE_SORT_TYPE, true);
+            String defaultHomeSort = mSharedPreferences.getString(SharedPreferencesUtils.HOME_DEFAULT_SORT_TYPE, SortType.Type.HOT.name());
+            String sort = saveSortType
+                    ? mSortTypeSharedPreferences.getString(SharedPreferencesUtils.SORT_TYPE_SUBREDDIT_POST_BASE + "-", defaultHomeSort)
+                    : defaultHomeSort;
             if (sort.equals(SortType.Type.CONTROVERSIAL.name()) || sort.equals(SortType.Type.TOP.name())) {
-                String sortTime = mSortTypeSharedPreferences.getString(SharedPreferencesUtils.SORT_TIME_SUBREDDIT_POST_BASE + "-", SortType.Time.ALL.name());
+                String defaultHomeSortTime = mSharedPreferences.getString(SharedPreferencesUtils.HOME_DEFAULT_SORT_TIME, SortType.Time.ALL.name());
+                String sortTime = saveSortType
+                        ? mSortTypeSharedPreferences.getString(SharedPreferencesUtils.SORT_TIME_SUBREDDIT_POST_BASE + "-", defaultHomeSortTime)
+                        : defaultHomeSortTime;
                 sortType = new SortType(SortType.Type.valueOf(sort), SortType.Time.valueOf(sortTime));
             } else {
                 sortType = new SortType(SortType.Type.valueOf(sort));
@@ -857,9 +864,16 @@ public class PostFragment extends Fragment implements FragmentCommunicator {
             usage = PostFilterUsage.HOME_TYPE;
             nameOfUsage = PostFilterUsage.NO_USAGE;
 
-            String sort = mSortTypeSharedPreferences.getString(SharedPreferencesUtils.SORT_TYPE_BEST_POST, SortType.Type.BEST.name());
+            boolean saveSortType = mSharedPreferences.getBoolean(SharedPreferencesUtils.SAVE_SORT_TYPE, true);
+            String defaultHomeSort = mSharedPreferences.getString(SharedPreferencesUtils.HOME_DEFAULT_SORT_TYPE, SortType.Type.BEST.name());
+            String sort = saveSortType
+                    ? mSortTypeSharedPreferences.getString(SharedPreferencesUtils.SORT_TYPE_BEST_POST, defaultHomeSort)
+                    : defaultHomeSort;
             if (sort.equals(SortType.Type.CONTROVERSIAL.name()) || sort.equals(SortType.Type.TOP.name())) {
-                String sortTime = mSortTypeSharedPreferences.getString(SharedPreferencesUtils.SORT_TIME_BEST_POST, SortType.Time.ALL.name());
+                String defaultHomeSortTime = mSharedPreferences.getString(SharedPreferencesUtils.HOME_DEFAULT_SORT_TIME, SortType.Time.ALL.name());
+                String sortTime = saveSortType
+                        ? mSortTypeSharedPreferences.getString(SharedPreferencesUtils.SORT_TIME_BEST_POST, defaultHomeSortTime)
+                        : defaultHomeSortTime;
                 sortType = new SortType(SortType.Type.valueOf(sort), SortType.Time.valueOf(sortTime));
             } else {
                 sortType = new SortType(SortType.Type.valueOf(sort));
@@ -1281,8 +1295,9 @@ public class PostFragment extends Fragment implements FragmentCommunicator {
         } else {
             //Anonymous Front Page
             mPostViewModel = new ViewModelProvider((ViewModelStoreOwner) PostFragment.this, (ViewModelProvider.Factory) new PostViewModel.Factory(mExecutor,
-                    mRetrofit, mSharedPreferences, concatenatedSubredditNames, postType, sortType, postFilter))
-                    .get(PostViewModel.class);
+                    mRetrofit, l_accessToken == null ? null : mGqlRetrofit, l_accessToken, accountName, mSharedPreferences,
+                    mPostFeedScrolledPositionSharedPreferences, null, concatenatedSubredditNames, postType, sortType,
+                    postFilter, readPosts)).get(PostViewModel.class);
         }
 
         bindPostViewModel();

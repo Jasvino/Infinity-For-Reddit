@@ -175,6 +175,9 @@ public class SharedPreferencesUtils {
     public static final String SUBREDDIT_DEFAULT_SORT_TIME = "subreddit_default_sort_time";
     public static final String USER_DEFAULT_SORT_TYPE = "user_default_sort_type";
     public static final String USER_DEFAULT_SORT_TIME = "user_default_sort_time";
+    public static final String HOME_DEFAULT_SORT_TYPE = "home_default_sort_type";
+    public static final String HOME_DEFAULT_SORT_TIME = "home_default_sort_time";
+    public static final String COMMENT_DEFAULT_SORT_TYPE = "comment_default_sort_type";
     public static final String CLICK_TO_SHOW_MEDIA_IN_GALLERY_LAYOUT = "click_to_show_media_in_gallery_layout";
     public static final String HIDE_POST_TYPE = "hide_post_type";
     public static final String HIDE_POST_FLAIR = "hide_post_flair";

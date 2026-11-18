@@ -833,13 +833,18 @@ public class ViewPostDetailFragment extends Fragment implements FragmentCommunic
 
     @NonNull
     private SortType.Type loadSortType() {
-        String sortTypeName = mSortTypeSharedPreferences.getString(SharedPreferencesUtils.SORT_TYPE_POST_COMMENT, SortType.Type.CONFIDENCE.name());
+        boolean saveSortType = mSharedPreferences.getBoolean(SharedPreferencesUtils.SAVE_SORT_TYPE, true);
+        String defaultCommentSort = mSharedPreferences.getString(SharedPreferencesUtils.COMMENT_DEFAULT_SORT_TYPE, SortType.Type.CONFIDENCE.name());
+        String sortTypeName = saveSortType
+                ? mSortTypeSharedPreferences.getString(SharedPreferencesUtils.SORT_TYPE_POST_COMMENT, defaultCommentSort)
+                : defaultCommentSort;
         if (SortType.Type.BEST.name().equals(sortTypeName)) {
             // migrate from BEST to CONFIDENCE
-            // key guaranteed to exist because got non-default value
-            mSortTypeSharedPreferences.edit()
-                    .putString(SharedPreferencesUtils.SORT_TYPE_POST_COMMENT, SortType.Type.CONFIDENCE.name())
-                    .apply();
+            if (saveSortType) {
+                mSortTypeSharedPreferences.edit()
+                        .putString(SharedPreferencesUtils.SORT_TYPE_POST_COMMENT, SortType.Type.CONFIDENCE.name())
+                        .apply();
+            }
             return SortType.Type.CONFIDENCE;
         }
         return SortType.Type.valueOf(sortTypeName);

@@ -546,6 +546,46 @@
         <item>ALL</item>
     </string-array>
 
+    <string-array name="settings_home_default_sort_type">
+        <item>Best</item>
+        <item>Hot</item>
+        <item>New</item>
+        <item>Rising</item>
+        <item>Top</item>
+        <item>Controversial</item>
+    </string-array>
+
+    <string-array name="settings_home_default_sort_type_values">
+        <item>BEST</item>
+        <item>HOT</item>
+        <item>NEW</item>
+        <item>RISING</item>
+        <item>TOP</item>
+        <item>CONTROVERSIAL</item>
+    </string-array>
+
+    <string-array name="settings_comment_default_sort_type">
+        <item>Best</item>
+        <item>Top</item>
+        <item>New</item>
+        <item>Controversial</item>
+        <item>Old</item>
+        <item>Random</item>
+        <item>Q&amp;A</item>
+        <item>Live</item>
+    </string-array>
+
+    <string-array name="settings_comment_default_sort_type_values">
+        <item>CONFIDENCE</item>
+        <item>TOP</item>
+        <item>NEW</item>
+        <item>CONTROVERSIAL</item>
+        <item>OLD</item>
+        <item>RANDOM</item>
+        <item>QA</item>
+        <item>LIVE</item>
+    </string-array>
+
     <string-array name="settings_default_search_result_tab">
         <item>@string/posts</item>
         <item>@string/subreddits</item>

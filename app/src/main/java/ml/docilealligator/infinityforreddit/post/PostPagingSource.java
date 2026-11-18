@@ -207,7 +207,11 @@ public class PostPagingSource extends ListenableFuturePagingSource<String, Post>
             case TYPE_MULTI_REDDIT:
                 return loadMultiRedditPosts(loadParams, api);
             default:
-                return loadAnonymousHomePosts(loadParams, api);
+                if (gqlRetrofit != null && accessToken != null) {
+                    return loadAnonymousHomePosts(loadParams, api, gqlRetrofit.create(GqlAPI.class));
+                } else {
+                    return loadAnonymousHomePosts(loadParams, api, null);
+                }
         }
     }
 
@@ -620,17 +624,131 @@ public class PostPagingSource extends ListenableFuturePagingSource<String, Post>
                 IOException.class, LoadResult.Error::new, executor);
     }
 
-    private ListenableFuture<LoadResult<String, Post>> loadAnonymousHomePosts(@NonNull LoadParams<String> loadParams, RedditAPI api) {
-        ListenableFuture<Response<String>> anonymousHomePosts;
-        anonymousHomePosts = api.getSubredditBestPostsListenableFuture(subredditOrUserName, sortType.getType(), sortType.getTime(), loadParams.getKey());
+    private static class SubredditGqlResult {
+        final String subreddit;
+        final Response<String> response;
 
-        ListenableFuture<LoadResult<String, Post>> pageFuture = Futures.transform(anonymousHomePosts, this::transformData, executor);
+        SubredditGqlResult(String subreddit, Response<String> response) {
+            this.subreddit = subreddit;
+            this.response = response;
+        }
+    }
+
+    private ListenableFuture<LoadResult<String, Post>> loadAnonymousHomePosts(@NonNull LoadParams<String> loadParams, RedditAPI api, GqlAPI gqlAPI) {
+        if (gqlAPI == null) {
+            ListenableFuture<Response<String>> anonymousHomePosts =
+                    api.getSubredditBestPostsListenableFuture(subredditOrUserName, sortType.getType(), sortType.getTime(), loadParams.getKey());
+            ListenableFuture<LoadResult<String, Post>> pageFuture = Futures.transform(anonymousHomePosts, this::transformData, executor);
+            ListenableFuture<LoadResult<String, Post>> partial = Futures.catching(pageFuture, HttpException.class, LoadResult.Error::new, executor);
+            return Futures.catching(partial, IOException.class, LoadResult.Error::new, executor);
+        }
+
+        if (subredditOrUserName == null || subredditOrUserName.trim().isEmpty()) {
+            return Futures.immediateFuture(new LoadResult.Error<>(new Exception("No subscribed subreddits")));
+        }
+
+        JSONObject parsedCursors = null;
+        if (loadParams.getKey() != null) {
+            try {
+                parsedCursors = new JSONObject(loadParams.getKey());
+            } catch (JSONException ignored) {
+            }
+        }
+        final JSONObject cursors = parsedCursors;
+
+        String[] allSubs = subredditOrUserName.split("\\+");
+        List<String> targetSubs = new ArrayList<>();
+        for (String s : allSubs) {
+            String trimmed = s.trim();
+            if (trimmed.isEmpty()) continue;
+            if (cursors == null || cursors.has(trimmed)) {
+                targetSubs.add(trimmed);
+            }
+        }
+
+        if (targetSubs.isEmpty()) {
+            return Futures.immediateFuture(new LoadResult.Page<>(new ArrayList<>(), null, null));
+        }
+
+        SortType.Type effectiveSort = sortType.getType() == SortType.Type.BEST ? SortType.Type.HOT : sortType.getType();
+        List<ListenableFuture<SubredditGqlResult>> subFutures = new ArrayList<>();
+        for (String sub : targetSubs) {
+            String subAfter = cursors != null ? cursors.optString(sub, null) : null;
+            if (subAfter != null && subAfter.isEmpty()) {
+                subAfter = null;
+            }
+            RequestBody body = createSubredditPostsVars(sub, effectiveSort, sortType.getTime(), subAfter);
+            ListenableFuture<Response<String>> callFuture =
+                    gqlAPI.getSubredditBestPostsOauthListenableFuture(APIUtils.getOAuthHeader(accessToken), body);
+            ListenableFuture<SubredditGqlResult> mapped =
+                    Futures.transform(callFuture, resp -> new SubredditGqlResult(sub, resp), executor);
+            ListenableFuture<SubredditGqlResult> safe =
+                    Futures.catching(mapped, Throwable.class, t -> new SubredditGqlResult(sub, null), executor);
+            subFutures.add(safe);
+        }
+
+        ListenableFuture<List<SubredditGqlResult>> allFuture = Futures.allAsList(subFutures);
+        ListenableFuture<LoadResult<String, Post>> pageFuture = Futures.transform(allFuture, results -> {
+            List<List<Post>> perSubLists = new ArrayList<>();
+            JSONObject nextCursors = new JSONObject();
+            int successCount = 0;
+
+            for (SubredditGqlResult result : results) {
+                if (result.response == null || !result.response.isSuccessful() || result.response.body() == null) {
+                    continue;
+                }
+                String bodyStr = result.response.body();
+                LinkedHashSet<Post> parsed = ParsePost.parsePostsSyncGQL(bodyStr, -1, postFilter, readPostList);
+                if (parsed == null) {
+                    continue;
+                }
+                successCount++;
+                perSubLists.add(new ArrayList<>(parsed));
+                String lastItem = ParsePost.getLastItemGQL(bodyStr);
+                if (lastItem != null && !lastItem.isEmpty()) {
+                    try {
+                        nextCursors.put(result.subreddit, lastItem);
+                    } catch (JSONException ignored) {
+                    }
+                }
+            }
+
+            if (successCount == 0) {
+                return new LoadResult.Error<>(new Exception("Error loading home posts"));
+            }
+
+            List<Post> interleaved = new ArrayList<>();
+            int maxLen = 0;
+            for (List<Post> list : perSubLists) {
+                if (list.size() > maxLen) {
+                    maxLen = list.size();
+                }
+            }
+            for (int i = 0; i < maxLen; i++) {
+                for (List<Post> list : perSubLists) {
+                    if (i < list.size()) {
+                        interleaved.add(list.get(i));
+                    }
+                }
+            }
+
+            int currentPostsSize = postLinkedHashSet.size();
+            postLinkedHashSet.addAll(interleaved);
+            String nextKey = nextCursors.length() > 0 ? nextCursors.toString() : null;
+
+            if (currentPostsSize == postLinkedHashSet.size()) {
+                return new LoadResult.Page<>(new ArrayList<>(), null, nextKey);
+            } else {
+                return new LoadResult.Page<>(
+                        new ArrayList<>(postLinkedHashSet).subList(currentPostsSize, postLinkedHashSet.size()),
+                        null,
+                        nextKey);
+            }
+        }, executor);
 
         ListenableFuture<LoadResult<String, Post>> partialLoadResultFuture =
-                Futures.catching(pageFuture, HttpException.class,
-                        LoadResult.Error::new, executor);
+                Futures.catching(pageFuture, HttpException.class, LoadResult.Error::new, executor);
 
-        return Futures.catching(partialLoadResultFuture,
-                IOException.class, LoadResult.Error::new, executor);
+        return Futures.catching(partialLoadResultFuture, IOException.class, LoadResult.Error::new, executor);
     }
 }

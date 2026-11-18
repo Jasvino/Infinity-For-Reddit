@@ -632,9 +632,10 @@ public class Post implements Parcelable {
             this.url = url;
             this.fallbackUrl = fallbackUrl;
             this.fileName = fileName;
-            if (mimeType.contains("gif")) {
+            String lowerMime = mimeType == null ? "" : mimeType.toLowerCase(java.util.Locale.ROOT);
+            if (lowerMime.contains("gif")) {
                 mediaType = TYPE_GIF;
-            } else if (mimeType.contains("jpg") || mimeType.contains("png")) {
+            } else if (lowerMime.contains("jpg") || lowerMime.contains("jpeg") || lowerMime.contains("png") || lowerMime.contains("webp") || lowerMime.startsWith("image/")) {
                 mediaType = TYPE_IMAGE;
             } else {
                 mediaType = TYPE_VIDEO;

@@ -69,7 +69,7 @@ public class AnonymousAccessTokenInterceptor implements Interceptor {
 
     private Request newRequest(Request request, String accessToken) {
         return request.newBuilder()
-                .headers(Headers.of(APIUtils.getOAuthHeader(accessToken))).removeHeader(APIUtils.USER_AGENT_KEY)
+                .headers(Headers.of(APIUtils.getOAuthHeader(accessToken)))
                 .build();
     }
 

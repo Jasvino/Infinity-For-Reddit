@@ -580,6 +580,9 @@
     <string name="settings_subreddit_default_sort_time_title">Subreddit Default Sort Time</string>
     <string name="settings_user_default_sort_type_title">User Default Sort Type</string>
     <string name="settings_user_default_sort_time_title">User Default Sort Time</string>
+    <string name="settings_home_default_sort_type_title">Home Default Sort Type</string>
+    <string name="settings_home_default_sort_time_title">Home Default Sort Time</string>
+    <string name="settings_comment_default_sort_type_title">Comment Default Sort Type</string>
     <string name="settings_click_to_show_media_in_gallery_layout">Click to Show Media in Gallery Layout</string>
     <string name="settings_hide_post_type">Hide Post Type</string>
     <string name="settings_hide_post_flair">Hide Post Flair</string>
