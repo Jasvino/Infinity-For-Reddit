@@ -16,11 +16,16 @@ import retrofit2.Retrofit;
 public class FetchPost {
     public static void fetchPost(Executor executor, Handler handler, Retrofit retrofit, String id, String accessToken,
                                  FetchPostListener fetchPostListener) {
+        if (id == null || id.isEmpty()) {
+            fetchPostListener.fetchPostFailed();
+            return;
+        }
+        String fullname = id.startsWith("t3_") ? id : "t3_" + id;
         Call<String> postCall;
         if (accessToken == null) {
-            postCall = retrofit.create(RedditAPI.class).getPost(id);
+            postCall = retrofit.create(RedditAPI.class).getPostById(fullname);
         } else {
-            postCall = retrofit.create(RedditAPI.class).getPostOauth(id, APIUtils.getOAuthHeader(accessToken));
+            postCall = retrofit.create(RedditAPI.class).getPostByIdOauth(fullname, APIUtils.getOAuthHeader(accessToken));
         }
         postCall.enqueue(new Callback<>() {
             @Override

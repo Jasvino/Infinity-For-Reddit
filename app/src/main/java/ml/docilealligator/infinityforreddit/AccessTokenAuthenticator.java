@@ -27,19 +27,26 @@ class AccessTokenAuthenticator implements Authenticator {
     private Retrofit mRetrofit;
     private RedditDataRoomDatabase mRedditDataRoomDatabase;
     private SharedPreferences mCurrentAccountSharedPreferences;
+    private SharedPreferences mAnonymousAccountSharedPreferences;
 
-    AccessTokenAuthenticator(Retrofit retrofit, RedditDataRoomDatabase accountRoomDatabase, SharedPreferences currentAccountSharedPreferences) {
+    AccessTokenAuthenticator(Retrofit retrofit, RedditDataRoomDatabase accountRoomDatabase,
+                             SharedPreferences currentAccountSharedPreferences,
+                             SharedPreferences anonymousAccountSharedPreferences) {
         mRetrofit = retrofit.newBuilder().baseUrl(APIUtils.LOGIN_BASE_URL).build();
         mRedditDataRoomDatabase = accountRoomDatabase;
         mCurrentAccountSharedPreferences = currentAccountSharedPreferences;
+        mAnonymousAccountSharedPreferences = anonymousAccountSharedPreferences;
     }
 
     @Nullable
     @Override
     public Request authenticate(Route route, @NonNull Response response) {
         if (response.code() == 401) {
+            if (response.priorResponse() != null) {
+                return null;
+            }
             String accessTokenHeader = response.request().header(APIUtils.AUTHORIZATION_KEY);
-            if (accessTokenHeader == null) {
+            if (accessTokenHeader == null || !accessTokenHeader.regionMatches(true, 0, APIUtils.AUTHORIZATION_BASE, 0, APIUtils.AUTHORIZATION_BASE.length())) {
                 return null;
             }
 
@@ -47,6 +54,14 @@ class AccessTokenAuthenticator implements Authenticator {
             synchronized (this) {
                 Account account = mRedditDataRoomDatabase.accountDao().getCurrentAccount();
                 if (account == null) {
+                    String anonTokenFromPrefs = mAnonymousAccountSharedPreferences.getString(SharedPreferencesUtils.ACCESS_TOKEN, "");
+                    if (!"".equals(anonTokenFromPrefs) && !accessToken.equals(anonTokenFromPrefs)) {
+                        return response.request().newBuilder().headers(Headers.of(APIUtils.getOAuthHeader(anonTokenFromPrefs))).build();
+                    }
+                    String newAccessToken = refreshAnonymousAccessToken();
+                    if (!newAccessToken.equals("")) {
+                        return response.request().newBuilder().headers(Headers.of(APIUtils.getOAuthHeader(newAccessToken))).build();
+                    }
                     return null;
                 }
                 String accessTokenFromDatabase = account.getAccessToken();
@@ -63,6 +78,28 @@ class AccessTokenAuthenticator implements Authenticator {
             }
         }
         return null;
+    }
+
+    private String refreshAnonymousAccessToken() {
+        RedditAccountsAPI api = mRetrofit.create(RedditAccountsAPI.class);
+
+        Call<String> accessTokenCall = api.getAccessToken(APIUtils.getHttpBasicAuthHeader(), APIUtils.SCOPE);
+        try {
+            retrofit2.Response<String> response = accessTokenCall.execute();
+            if (response.isSuccessful() && response.body() != null) {
+                JSONObject jsonObject = new JSONObject(response.body());
+                String newAccessToken = jsonObject.getString(APIUtils.ACCESS_TOKEN_KEY);
+                mAnonymousAccountSharedPreferences.edit()
+                        .putString(SharedPreferencesUtils.ACCESS_TOKEN, newAccessToken)
+                        .apply();
+                return newAccessToken;
+            }
+            return "";
+        } catch (IOException | JSONException e) {
+            e.printStackTrace();
+        }
+
+        return "";
     }
 
     private String refreshAccessToken(Account account) {

@@ -51,6 +51,12 @@ public interface RedditAPI {
     @GET("comments/{id}.json?raw_json=1")
     Call<String> getPost(@Path("id") String id);
 
+    @GET("by_id/{fullname}.json?raw_json=1")
+    Call<String> getPostById(@Path("fullname") String fullname);
+
+    @GET("by_id/{fullname}.json?raw_json=1")
+    Call<String> getPostByIdOauth(@Path("fullname") String fullname, @HeaderMap Map<String, String> headers);
+
     @GET("user/{username}/about.json?raw_json=1")
     Call<String> getUserData(@Path("username") String username);
 

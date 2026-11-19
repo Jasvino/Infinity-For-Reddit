@@ -167,7 +167,14 @@ public class ParsePost {
 
         executor.execute(() -> {
             try {
-                JSONArray allData = new JSONArray(response).getJSONObject(0).getJSONObject(JSONUtils.DATA_KEY).getJSONArray(JSONUtils.CHILDREN_KEY);
+                String trimmed = response == null ? "" : response.trim();
+                JSONObject listingObject;
+                if (trimmed.startsWith("[")) {
+                    listingObject = new JSONArray(trimmed).getJSONObject(0);
+                } else {
+                    listingObject = new JSONObject(trimmed);
+                }
+                JSONArray allData = listingObject.getJSONObject(JSONUtils.DATA_KEY).getJSONArray(JSONUtils.CHILDREN_KEY);
                 if (allData.length() == 0) {
                     handler.post(parsePostListener::onParsePostFail);
                     return;

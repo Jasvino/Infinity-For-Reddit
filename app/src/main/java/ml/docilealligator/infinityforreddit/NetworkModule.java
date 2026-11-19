@@ -109,9 +109,10 @@ abstract class NetworkModule {
                                             @Named("base") Retrofit retrofit,
                                             RedditDataRoomDatabase accountRoomDatabase,
                                             @Named("current_account") SharedPreferences currentAccountSharedPreferences,
+                                            @Named("anonymous_account") SharedPreferences anonymousAccountSharedPreferences,
                                             ConnectionPool connectionPool) {
         return httpClient.newBuilder()
-                .authenticator(new AccessTokenAuthenticator(retrofit, accountRoomDatabase, currentAccountSharedPreferences))
+                .authenticator(new AccessTokenAuthenticator(retrofit, accountRoomDatabase, currentAccountSharedPreferences, anonymousAccountSharedPreferences))
                 .connectionPool(connectionPool)
                 .build();
     }
