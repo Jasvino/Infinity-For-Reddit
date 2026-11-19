@@ -11,15 +11,21 @@ public class UserListingDataSourceFactory extends DataSource.Factory {
     private Retrofit retrofit;
     private String query;
     private SortType sortType;
+    private String accessToken;
     private boolean nsfw;
 
     private UserListingDataSource userListingDataSource;
     private MutableLiveData<UserListingDataSource> userListingDataSourceMutableLiveData;
 
     UserListingDataSourceFactory(Retrofit retrofit, String query, SortType sortType, boolean nsfw) {
+        this(retrofit, query, sortType, null, nsfw);
+    }
+
+    UserListingDataSourceFactory(Retrofit retrofit, String query, SortType sortType, String accessToken, boolean nsfw) {
         this.retrofit = retrofit;
         this.query = query;
         this.sortType = sortType;
+        this.accessToken = accessToken;
         this.nsfw = nsfw;
         userListingDataSourceMutableLiveData = new MutableLiveData<>();
     }
@@ -27,7 +33,7 @@ public class UserListingDataSourceFactory extends DataSource.Factory {
     @NonNull
     @Override
     public DataSource create() {
-        userListingDataSource = new UserListingDataSource(retrofit, query, sortType, nsfw);
+        userListingDataSource = new UserListingDataSource(retrofit, query, sortType, accessToken, nsfw);
         userListingDataSourceMutableLiveData.postValue(userListingDataSource);
         return userListingDataSource;
     }

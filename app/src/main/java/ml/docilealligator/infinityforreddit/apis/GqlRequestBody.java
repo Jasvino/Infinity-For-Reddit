@@ -48,6 +48,50 @@ public class GqlRequestBody {
         return RequestBody.create(data.toString(), okhttp3.MediaType.parse("application/json; charset=utf-8"));
     }
 
+    public static RequestBody userSearchBody(String query, String afterCursor){
+        return userSearchBody(query, afterCursor, 25);
+    }
+
+    public static RequestBody userSearchBody(String query, String afterCursor, int pageSize){
+
+        JSONObject data = new JSONObject();
+        try {
+            data.put("operationName", "SearchPeople");
+            JSONObject variables = new JSONObject();
+            variables.put("query", query);
+            variables.put("pageSize", pageSize);
+            variables.put("productSurface", "");
+            variables.put("filters", new JSONArray());
+            if (afterCursor != null && !afterCursor.isEmpty() && !afterCursor.equals("null")) {
+                variables.put("afterCursor", afterCursor);
+            }
+
+            data.put("variables", variables);
+            data.put("extensions", createExtensionsObject("d9211ac33f72079f25cb4c8a8e00a2b4889e984f70278ec91283965c7856d33d"));
+
+        }catch (JSONException e){
+
+        }
+        return RequestBody.create(data.toString(), okhttp3.MediaType.parse("application/json; charset=utf-8"));
+    }
+
+    public static RequestBody profileDetailsBody(String profileName){
+
+        JSONObject data = new JSONObject();
+        try {
+            data.put("operationName", "ProfileDetailsByName");
+            JSONObject variables = new JSONObject();
+            variables.put("profileName", profileName);
+
+            data.put("variables", variables);
+            data.put("extensions", createExtensionsObject("096ccf5d943485822cb6d3e0dc13f9977da1984514e1d539e1ed38a51158e689"));
+
+        }catch (JSONException e){
+
+        }
+        return RequestBody.create(data.toString(), okhttp3.MediaType.parse("application/json; charset=utf-8"));
+    }
+
     public static RequestBody subredditSearchBody(String query, boolean nsfw, String afterCursor){
 
         JSONObject data = new JSONObject();

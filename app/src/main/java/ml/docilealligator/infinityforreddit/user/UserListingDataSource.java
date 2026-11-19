@@ -15,6 +15,7 @@ public class UserListingDataSource extends PageKeyedDataSource<String, UserData>
     private Retrofit retrofit;
     private String query;
     private SortType sortType;
+    private String accessToken;
     private boolean nsfw;
 
     private MutableLiveData<NetworkState> paginationNetworkStateLiveData;
@@ -25,9 +26,14 @@ public class UserListingDataSource extends PageKeyedDataSource<String, UserData>
     private PageKeyedDataSource.LoadCallback<String, UserData> callback;
 
     UserListingDataSource(Retrofit retrofit, String query, SortType sortType, boolean nsfw) {
+        this(retrofit, query, sortType, null, nsfw);
+    }
+
+    UserListingDataSource(Retrofit retrofit, String query, SortType sortType, String accessToken, boolean nsfw) {
         this.retrofit = retrofit;
         this.query = query;
         this.sortType = sortType;
+        this.accessToken = accessToken;
         this.nsfw = nsfw;
         paginationNetworkStateLiveData = new MutableLiveData<>();
         initialLoadStateLiveData = new MutableLiveData<>();
@@ -50,7 +56,7 @@ public class UserListingDataSource extends PageKeyedDataSource<String, UserData>
     public void loadInitial(@NonNull PageKeyedDataSource.LoadInitialParams<String> params, @NonNull PageKeyedDataSource.LoadInitialCallback<String, UserData> callback) {
         initialLoadStateLiveData.postValue(NetworkState.LOADING);
 
-        FetchUserData.fetchUserListingData(retrofit, query, null, sortType.getType(), nsfw,
+        FetchUserData.fetchUserListingData(retrofit, query, null, sortType.getType(), nsfw, accessToken,
                 new FetchUserData.FetchUserListingDataListener() {
                     @Override
                     public void onFetchUserListingDataSuccess(ArrayList<UserData> UserData, String after) {
@@ -81,7 +87,7 @@ public class UserListingDataSource extends PageKeyedDataSource<String, UserData>
             return;
         }
 
-        FetchUserData.fetchUserListingData(retrofit, query, params.key, sortType.getType(), nsfw,
+        FetchUserData.fetchUserListingData(retrofit, query, params.key, sortType.getType(), nsfw, accessToken,
                 new FetchUserData.FetchUserListingDataListener() {
                     @Override
                     public void onFetchUserListingDataSuccess(ArrayList<UserData> UserData, String after) {

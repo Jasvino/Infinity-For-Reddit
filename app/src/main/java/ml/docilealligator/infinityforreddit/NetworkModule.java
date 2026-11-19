@@ -103,6 +103,16 @@ abstract class NetworkModule {
     }
 
     @Provides
+    @Named("gql_anonymous")
+    static Retrofit provideGqlAnonymousRetrofit(@Named("base") Retrofit retrofit,
+                                                @Named("anonymous") OkHttpClient okHttpClient) {
+        return retrofit.newBuilder()
+                .baseUrl(APIUtils.GQL_BASE_URL)
+                .client(okHttpClient)
+                .build();
+    }
+
+    @Provides
     @Named("default")
     @Singleton
     static OkHttpClient provideOkHttpClient(@Named("base") OkHttpClient httpClient,

@@ -22,7 +22,11 @@ public class UserListingViewModel extends ViewModel {
     private MutableLiveData<SortType> sortTypeLiveData;
 
     public UserListingViewModel(Retrofit retrofit, String query, SortType sortType, boolean nsfw) {
-        userListingDataSourceFactory = new UserListingDataSourceFactory(retrofit, query, sortType, nsfw);
+        this(retrofit, query, sortType, null, nsfw);
+    }
+
+    public UserListingViewModel(Retrofit retrofit, String query, SortType sortType, String accessToken, boolean nsfw) {
+        userListingDataSourceFactory = new UserListingDataSourceFactory(retrofit, query, sortType, accessToken, nsfw);
 
         initialLoadingState = Transformations.switchMap(userListingDataSourceFactory.getUserListingDataSourceMutableLiveData(),
                 UserListingDataSource::getInitialLoadStateLiveData);
@@ -78,19 +82,25 @@ public class UserListingViewModel extends ViewModel {
         private Retrofit retrofit;
         private String query;
         private SortType sortType;
+        private String accessToken;
         private boolean nsfw;
 
         public Factory(Retrofit retrofit, String query, SortType sortType, boolean nsfw) {
+            this(retrofit, query, sortType, null, nsfw);
+        }
+
+        public Factory(Retrofit retrofit, String query, SortType sortType, String accessToken, boolean nsfw) {
             this.retrofit = retrofit;
             this.query = query;
             this.sortType = sortType;
+            this.accessToken = accessToken;
             this.nsfw = nsfw;
         }
 
         @NonNull
         @Override
         public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
-            return (T) new UserListingViewModel(retrofit, query, sortType, nsfw);
+            return (T) new UserListingViewModel(retrofit, query, sortType, accessToken, nsfw);
         }
     }
 }

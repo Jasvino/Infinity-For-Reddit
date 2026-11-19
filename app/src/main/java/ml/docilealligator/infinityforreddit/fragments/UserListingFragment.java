@@ -82,6 +82,12 @@ public class UserListingFragment extends Fragment implements FragmentCommunicato
     @Named("oauth")
     Retrofit mOauthRetrofit;
     @Inject
+    @Named("gql")
+    Retrofit mGQLRetrofit;
+    @Inject
+    @Named("gql_anonymous")
+    Retrofit mGQLAnonymousRetrofit;
+    @Inject
     RedditDataRoomDatabase mRedditDataRoomDatabase;
     @Inject
     @Named("default")
@@ -178,8 +184,9 @@ public class UserListingFragment extends Fragment implements FragmentCommunicato
             });
         }
 
-        UserListingViewModel.Factory factory = new UserListingViewModel.Factory(mRetrofit, mQuery,
-                sortType, nsfw);
+        UserListingViewModel.Factory factory = new UserListingViewModel.Factory(
+                accessToken == null ? mGQLAnonymousRetrofit : mGQLRetrofit,
+                mQuery, sortType, accessToken, nsfw);
         mUserListingViewModel = new ViewModelProvider(this, factory).get(UserListingViewModel.class);
         mUserListingViewModel.getUsers().observe(getViewLifecycleOwner(), UserData -> mAdapter.submitList(UserData));
 
