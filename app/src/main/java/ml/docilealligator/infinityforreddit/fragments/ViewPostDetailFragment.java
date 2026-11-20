@@ -257,6 +257,7 @@ public class ViewPostDetailFragment extends Fragment implements FragmentCommunic
     private ItemTouchHelper touchHelper;
     private int scrollPosition;
     private boolean mIsAnonymousMode;
+    private String mLastSearchQuery = "";
 
     public ViewPostDetailFragment() {
         // Required empty public constructor
@@ -872,56 +873,109 @@ public class ViewPostDetailFragment extends Fragment implements FragmentCommunic
     }
 
     public void searchComment(String query, boolean searchNextComment) {
-        if (mCommentsAdapter != null) {
-            ArrayList<Comment> visibleComments = mCommentsAdapter.getVisibleComments();
-            int currentSearchIndex = mCommentsAdapter.getSearchCommentIndex();
-            if (currentSearchIndex >= 0) {
-                mCommentsAdapter.notifyItemChanged(currentSearchIndex);
+        if (mCommentsAdapter == null || query == null || query.isEmpty()) {
+            return;
+        }
+        ArrayList<Comment> visibleComments = mCommentsAdapter.getVisibleComments();
+        if (visibleComments == null || visibleComments.isEmpty()) {
+            return;
+        }
+
+        int currentAdapterIndex = mCommentsAdapter.getSearchCommentIndex();
+        int currentCommentIndex = currentAdapterIndex >= 0
+                ? (isSingleCommentThreadMode ? currentAdapterIndex - 1 : currentAdapterIndex)
+                : -1;
+
+        if (!query.equalsIgnoreCase(mLastSearchQuery)) {
+            if (currentAdapterIndex >= 0) {
+                mCommentsAdapter.resetCommentSearchIndex();
+                mCommentsAdapter.notifyItemChanged(currentAdapterIndex);
+                currentAdapterIndex = -1;
             }
-            if (visibleComments != null) {
-                if (searchNextComment) {
-                    for (int i = currentSearchIndex + 1; i < visibleComments.size(); i++) {
-                        if (visibleComments.get(i).getCommentRawText() != null &&
-                                visibleComments.get(i).getCommentRawText().toLowerCase().contains(query.toLowerCase())) {
-                            if (mCommentsAdapter != null) {
-                                mCommentsAdapter.highlightSearchResult(i);
-                                mCommentsAdapter.notifyItemChanged(i);
-                                if (mCommentsRecyclerView == null) {
-                                    mRecyclerView.scrollToPosition(i + 1);
-                                } else {
-                                    mCommentsRecyclerView.scrollToPosition(i);
-                                }
-                            }
-                            return;
-                        }
-                    }
+            currentCommentIndex = -1;
+            mLastSearchQuery = query;
+        }
 
-                } else {
-                    for (int i = currentSearchIndex - 1; i >= 0; i--) {
-                        if (visibleComments.get(i).getCommentRawText() != null &&
-                                visibleComments.get(i).getCommentRawText().toLowerCase().contains(query.toLowerCase())) {
-                            if (mCommentsAdapter != null) {
-                                mCommentsAdapter.highlightSearchResult(i);
-                                mCommentsAdapter.notifyItemChanged(i);
-                                if (mCommentsRecyclerView == null) {
-                                    mRecyclerView.scrollToPosition(i + 1);
-                                } else {
-                                    mCommentsRecyclerView.scrollToPosition(i);
-                                }
-                            }
-                            return;
-                        }
-                    }
+        String lowerQuery = query.toLowerCase(Locale.US);
+        int size = visibleComments.size();
+        int matchIndex = -1;
 
+        if (searchNextComment) {
+            int start = (currentCommentIndex >= 0 && currentCommentIndex < size) ? currentCommentIndex + 1 : 0;
+            for (int i = start; i < size; i++) {
+                if (commentMatchesQuery(visibleComments.get(i), lowerQuery)) {
+                    matchIndex = i;
+                    break;
                 }
-                return;
             }
+            if (matchIndex == -1 && start > 0) {
+                for (int i = 0; i < start; i++) {
+                    if (commentMatchesQuery(visibleComments.get(i), lowerQuery)) {
+                        matchIndex = i;
+                        break;
+                    }
+                }
+            }
+        } else {
+            int start = (currentCommentIndex > 0 && currentCommentIndex < size) ? currentCommentIndex - 1 : size - 1;
+            for (int i = start; i >= 0; i--) {
+                if (commentMatchesQuery(visibleComments.get(i), lowerQuery)) {
+                    matchIndex = i;
+                    break;
+                }
+            }
+            if (matchIndex == -1 && start < size - 1) {
+                for (int i = size - 1; i > start; i--) {
+                    if (commentMatchesQuery(visibleComments.get(i), lowerQuery)) {
+                        matchIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (matchIndex != -1) {
+            int newAdapterIndex = isSingleCommentThreadMode ? matchIndex + 1 : matchIndex;
+            if (currentAdapterIndex >= 0 && currentAdapterIndex != newAdapterIndex) {
+                mCommentsAdapter.notifyItemChanged(currentAdapterIndex);
+            }
+            mCommentsAdapter.highlightSearchResult(newAdapterIndex);
+            mCommentsAdapter.notifyItemChanged(newAdapterIndex);
+
+            RecyclerView targetRecyclerView = mCommentsRecyclerView == null ? mRecyclerView : mCommentsRecyclerView;
+            int scrollTarget = mCommentsRecyclerView == null ? newAdapterIndex + 1 : newAdapterIndex;
+            RecyclerView.LayoutManager layoutManager = targetRecyclerView.getLayoutManager();
+            if (layoutManager instanceof LinearLayoutManager) {
+                ((LinearLayoutManager) layoutManager).scrollToPositionWithOffset(scrollTarget, 0);
+            } else {
+                targetRecyclerView.scrollToPosition(scrollTarget);
+            }
+        } else {
+            Toast.makeText(activity, "No matching comments found", Toast.LENGTH_SHORT).show();
         }
     }
 
+    private boolean commentMatchesQuery(Comment comment, String lowerQuery) {
+        if (comment == null || comment.getPlaceholderType() != Comment.NOT_PLACEHOLDER) {
+            return false;
+        }
+        String rawText = comment.getCommentRawText();
+        if (rawText != null && !rawText.isEmpty() && !"null".equals(rawText)
+                && rawText.toLowerCase(Locale.US).contains(lowerQuery)) {
+            return true;
+        }
+        String markdown = comment.getCommentMarkdown();
+        return markdown != null && markdown.toLowerCase(Locale.US).contains(lowerQuery);
+    }
+
     public void resetSearchCommentIndex() {
+        mLastSearchQuery = "";
         if (mCommentsAdapter != null) {
+            int currentAdapterIndex = mCommentsAdapter.getSearchCommentIndex();
             mCommentsAdapter.resetCommentSearchIndex();
+            if (currentAdapterIndex >= 0) {
+                mCommentsAdapter.notifyItemChanged(currentAdapterIndex);
+            }
         }
     }
 
@@ -951,8 +1005,8 @@ public class ViewPostDetailFragment extends Fragment implements FragmentCommunic
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         int itemId = item.getItemId();
         if (itemId == R.id.action_search_view_post_detail_fragment) {
-            if (activity.toggleSearchPanelVisibility() && mCommentsAdapter != null) {
-                mCommentsAdapter.resetCommentSearchIndex();
+            if (activity.toggleSearchPanelVisibility()) {
+                resetSearchCommentIndex();
             }
         } else if (itemId == R.id.action_refresh_view_post_detail_fragment) {
             refresh(true, true);

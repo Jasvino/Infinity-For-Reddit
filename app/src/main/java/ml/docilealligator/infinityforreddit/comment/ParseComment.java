@@ -642,8 +642,12 @@ public class ParseComment {
                 }
             }
 
-            commentRawText = Utils.trimTrailingWhitespace(
-                    Html.fromHtml(content.getString("html"))).toString();
+            if (!content.isNull("html")) {
+                commentRawText = Utils.trimTrailingWhitespace(
+                        Html.fromHtml(content.getString("html"))).toString();
+            } else {
+                commentRawText = commentMarkdown;
+            }
         }
 
 

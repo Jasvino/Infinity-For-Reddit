@@ -385,6 +385,17 @@ public class ViewPostDetailActivity extends BaseActivity implements SortTypeSele
 
         searchPanelMaterialCardView.setOnClickListener(null);
         
+        searchTextInputEditText.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+                    || actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE
+                    || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER
+                    && event.getAction() == KeyEvent.ACTION_DOWN)) {
+                nextResultImageView.performClick();
+                return true;
+            }
+            return false;
+        });
+
         nextResultImageView.setOnClickListener(view -> {
             ViewPostDetailFragment fragment = sectionsPagerAdapter.getCurrentFragment();
             if (fragment != null) {
